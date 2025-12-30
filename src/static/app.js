@@ -516,6 +516,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const url = button.dataset.url;
     const text = button.dataset.text;
 
+    // Validate URL is from the same origin for security
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.origin !== window.location.origin) {
+        console.error('Invalid share URL origin');
+        showMessage('Unable to share - invalid URL', 'error');
+        return;
+      }
+    } catch (e) {
+      console.error('Invalid share URL format:', e);
+      showMessage('Unable to share - invalid URL', 'error');
+      return;
+    }
+
     switch (shareType) {
       case 'facebook':
         window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
@@ -527,20 +541,26 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = `mailto:?subject=${encodeURIComponent('Check out this activity!')}&body=${encodeURIComponent(text + '\n\n' + url)}`;
         break;
       case 'copy':
-        navigator.clipboard.writeText(url).then(() => {
-          // Show feedback that link was copied
-          const originalText = button.innerHTML;
-          button.classList.add('copied');
-          button.innerHTML = '<span class="share-icon">✓</span><span>Copied!</span>';
-          
-          setTimeout(() => {
-            button.classList.remove('copied');
-            button.innerHTML = originalText;
-          }, 2000);
-        }).catch(err => {
-          console.error('Failed to copy link:', err);
-          showMessage('Failed to copy link', 'error');
-        });
+        // Check if clipboard API is available
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(() => {
+            // Show feedback that link was copied
+            const originalText = button.innerHTML;
+            button.classList.add('copied');
+            button.innerHTML = '<span class="share-icon">✓</span><span>Copied!</span>';
+            
+            setTimeout(() => {
+              button.classList.remove('copied');
+              button.innerHTML = originalText;
+            }, 2000);
+          }).catch(err => {
+            console.error('Failed to copy link:', err);
+            showMessage('Failed to copy link', 'error');
+          });
+        } else {
+          // Fallback for browsers that don't support clipboard API
+          showMessage('Clipboard not supported. Link: ' + url, 'info');
+        }
         break;
     }
   }
